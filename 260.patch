@@ -1,0 +1,139 @@
+From 09adc5ea8eefb0b89091e86d584db02dcd84bcb2 Mon Sep 17 00:00:00 2001
+From: "Nathanael d. Noblet" <nathanael@noblet.ca>
+Date: Wed, 9 Sep 2015 16:21:04 -0600
+Subject: [PATCH 1/2] Load one row at a time
+
+When the excel sheet being read has many rows (in my case 6700+)
+we run out of memory. This way we load a row per iteration.
+---
+ src/Reader/ExcelReader.php | 35 +++++++++++++++++++++++++----------
+ 1 file changed, 25 insertions(+), 10 deletions(-)
+
+diff --git a/src/Reader/ExcelReader.php b/src/Reader/ExcelReader.php
+index 0254fe2..ad92fb4 100644
+--- a/src/Reader/ExcelReader.php
++++ b/src/Reader/ExcelReader.php
+@@ -15,11 +15,21 @@
+ class ExcelReader implements CountableReader, \SeekableIterator
+ {
+     /**
+-     * @var array
++     * @var \PHPExcel_Worksheet
+      */
+     protected $worksheet;
+ 
+     /**
++     * @var string
++     */
++    protected $maxColumn;
++
++    /**
++     * @var int
++     */
++    protected $maxRow;
++
++    /**
+      * @var integer
+      */
+     protected $headerRowNumber;
+@@ -27,7 +37,7 @@ class ExcelReader implements CountableReader, \SeekableIterator
+     /**
+      * @var integer
+      */
+-    protected $pointer = 0;
++    protected $pointer = 1;
+ 
+     /**
+      * @var array
+@@ -58,7 +68,9 @@ public function __construct(\SplFileObject $file, $headerRowNumber = null, $acti
+             $excel->setActiveSheetIndex($activeSheet);
+         }
+ 
+-        $this->worksheet = $excel->getActiveSheet()->toArray();
++        $this->worksheet = $excel->getActiveSheet();
++        $this->maxColumn = $this->worksheet->getHighestColumn();
++        $this->maxRow    = $this->worksheet->getHighestRow();
+ 
+         if (null !== $headerRowNumber) {
+             $this->setHeaderRowNumber($headerRowNumber);
+@@ -74,7 +86,7 @@ public function __construct(\SplFileObject $file, $headerRowNumber = null, $acti
+      */
+     public function current()
+     {
+-        $row = $this->worksheet[$this->pointer];
++        $row = current($this->worksheet->rangeToArray(sprintf('A%d:%s%d',$this->pointer,$this->maxColumn,$this->pointer)));
+ 
+         // If the CSV has column headers, use them to construct an associative
+         // array for the columns in this line
+@@ -120,7 +132,7 @@ public function setColumnHeaders(array $columnHeaders)
+     public function rewind()
+     {
+         if (null === $this->headerRowNumber) {
+-            $this->pointer = 0;
++            $this->pointer = 1;
+         } else {
+             $this->pointer = $this->headerRowNumber + 1;
+         }
+@@ -133,8 +145,11 @@ public function rewind()
+      */
+     public function setHeaderRowNumber($rowNumber)
+     {
++        $rowNumber++;
+         $this->headerRowNumber = $rowNumber;
+-        $this->columnHeaders = $this->worksheet[$rowNumber];
++        $res = $this->worksheet->rangeToArray(sprintf('A%d:%s%d',$rowNumber,$this->maxColumn,$rowNumber));
++        $this->columnHeaders = current($res);
++        $this->pointer = $rowNumber;
+     }
+ 
+     /**
+@@ -150,7 +165,7 @@ public function next()
+      */
+     public function valid()
+     {
+-         return isset($this->worksheet[$this->pointer]);
++        return ($this->pointer < $this->maxRow);
+     }
+ 
+     /**
+@@ -174,12 +189,12 @@ public function seek($pointer)
+      */
+     public function count()
+     {
+-        $count = count($this->worksheet);
++        $maxRow = $this->maxRow;
+         if (null !== $this->headerRowNumber) {
+-            $count--;
++            $maxRow -= $this->headerRowNumber;
+         }
+ 
+-        return $count;
++        return $maxRow;
+     }
+ 
+     /**
+
+From 21fb2f0315f2ad700f25bf93011a74d5419a3573 Mon Sep 17 00:00:00 2001
+From: "Nathanael d. Noblet" <nathanael@noblet.ca>
+Date: Tue, 17 Nov 2015 12:20:08 +0100
+Subject: [PATCH 2/2] Call setColumnHeaders instead of manually assigning
+
+We should always call setColumnHeaders() so that if someone extends the
+function it is properly called.
+---
+ src/Reader/ExcelReader.php | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/Reader/ExcelReader.php b/src/Reader/ExcelReader.php
+index ad92fb4..293d46f 100644
+--- a/src/Reader/ExcelReader.php
++++ b/src/Reader/ExcelReader.php
+@@ -148,7 +148,7 @@ public function setHeaderRowNumber($rowNumber)
+         $rowNumber++;
+         $this->headerRowNumber = $rowNumber;
+         $res = $this->worksheet->rangeToArray(sprintf('A%d:%s%d',$rowNumber,$this->maxColumn,$rowNumber));
+-        $this->columnHeaders = current($res);
++        $this->setColumnHeaders(current($res));
+         $this->pointer = $rowNumber;
+     }
+ 
