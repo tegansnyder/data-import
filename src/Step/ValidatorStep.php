@@ -2,10 +2,10 @@
 
 namespace Ddeboer\DataImport\Step;
 
-use Symfony\Component\Validator\ValidatorInterface;
+use Ddeboer\DataImport\Exception\ValidationException;
 use Symfony\Component\Validator\Constraints;
 use Symfony\Component\Validator\Constraint;
-use Ddeboer\DataImport\Exception\ValidationException;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
  * @author Markus Bachmann <markus.bachmann@bachi.biz>
@@ -38,6 +38,12 @@ class ValidatorStep implements PriorityStep
     private $validator;
 
     /**
+     * Possible options to set for Constraints\Collection
+     * @var array
+     */
+    private $possibleOptions = [ 'groups', 'allowExtraFields', 'allowMissingFields', 'extraFieldsMessage', 'missingFieldsMessage' ];
+
+    /**
      * @param ValidatorInterface $validator
      */
     public function __construct(ValidatorInterface $validator)
@@ -54,10 +60,10 @@ class ValidatorStep implements PriorityStep
     public function add($field, Constraint $constraint)
     {
         if (!isset($this->constraints[$field])) {
-            $this->constraints[$field] = [];
+            $this->constraints['fields'][$field] = [];
         }
 
-        $this->constraints[$field][] = $constraint;
+        $this->constraints['fields'][$field][] = $constraint;
 
         return $this;
     }
@@ -79,12 +85,26 @@ class ValidatorStep implements PriorityStep
     }
 
     /**
+     * Add additional options for the constraints
+     * @param string $option
+     * @param $optionValue
+     */
+    public function addOption($option, $optionValue)
+    {
+        if (!in_array($option, $this->possibleOptions)) {
+            return;
+        }
+
+        $this->constraints[$option] = $optionValue;
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function process(&$item)
     {
         $constraints = new Constraints\Collection($this->constraints);
-        $list = $this->validator->validateValue($item, $constraints);
+        $list = $this->validator->validate($item, $constraints);
 
         if (count($list) > 0) {
             $this->violations[$this->line] = $list;

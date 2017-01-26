@@ -5,6 +5,8 @@ Ddeboer Data Import library
 [![Code Coverage](https://scrutinizer-ci.com/g/ddeboer/data-import/badges/coverage.png?s=724267091a6d02f83b6c435a431e71d467b361f8)](https://scrutinizer-ci.com/g/ddeboer/data-import/)
 [![Latest Stable Version](https://poser.pugx.org/ddeboer/data-import/v/stable.png)](https://packagist.org/packages/ddeboer/data-import)
 
+## This library has been renamed to PortPHP and will be deprecated. Please use [PortPHP](https://github.com/portphp) instead.
+
 Introduction
 ------------
 This PHP library offers a way to read data from, and write data to, a range of
@@ -50,7 +52,7 @@ Documentation
     - [CallbackFilter](#callbackfilter)
     - [OffsetFilter](#offsetfilter)
     - [DateTimeThresholdFilter](#datetimethresholdfilter)
-    - [ValidatorFilter](#offsetfilter)
+    - [ValidatorFilter](#validatorfilter)
   * [Converters](#converters)
     - [Item converters](#item-converters)
       - [MappingItemConverter](#mappingitemconverter)
@@ -328,7 +330,7 @@ Then use the reader to open an Excel file:
 ```php
 use Ddeboer\DataImport\Reader\ExcelReader;
 
-$file = new \SplFileObject('path/to/ecxel_file.xls');
+$file = new \SplFileObject('path/to/excel_file.xls');
 $reader = new ExcelReader($file);
 ```
 
@@ -915,9 +917,9 @@ $converter = new CallbackItemConverter(function ($item) use ($translator) {
 
 Value converters are used to convert specific fields (e.g., columns in database).
 
-#### StringToDateTimeValueConverter
+#### DateTimeValueConverter
 
-There are two uses for the StringToDateTimeValueConverter:
+There are two uses for the DateTimeValueConverter:
 
 1. Convert a date representation in a format you specify into a `DateTime` object.
 2. Convert a date representation in a format you specify into a different format.
@@ -925,18 +927,18 @@ There are two uses for the StringToDateTimeValueConverter:
 ##### Convert a date into a `DateTime` object.
 
 ```php
-use Ddeboer\DataImport\ValueConverter\StringDateTimeValueConverter;
+use Ddeboer\DataImport\ValueConverter\DateTimeValueConverter;
 
-$converter = new StringToDateTimeValueConverter('d/m/Y H:i:s');
+$converter = new DateTimeValueConverter('d/m/Y H:i:s');
 $workflow->addValueConverter('my_date_field', $converter);
 ```
 
 If your date string is in a format specified at: http://www.php.net/manual/en/datetime.formats.date.php then you can omit the format parameter.
 
 ```php
-use Ddeboer\DataImport\ValueConverter\StringToDateTimeValueConverter;
+use Ddeboer\DataImport\ValueConverter\DateTimeValueConverter;
 
-$converter = new StringToDateTimeValueConverter();
+$converter = new DateTimeValueConverter();
 $workflow->addValueConverter('my_date_field', $converter);
 ```
 
@@ -952,9 +954,9 @@ $workflow->addValueConverter('my_date_field', $converter);
 If your date is in a format specified at: http://www.php.net/manual/en/datetime.formats.date.php you can pass `null` as the first argument.
 
 ```php
-use Ddeboer\DataImport\ValueConverter\StringToDateTimeValueConverter;
+use Ddeboer\DataImport\ValueConverter\DateTimeValueConverter;
 
-$converter = new StringToDateTimeValueConverter(null, 'd-M-Y');
+$converter = new DateTimeValueConverter(null, 'd-M-Y');
 $workflow->addValueConverter('my_date_field', $converter);
 ```
 
